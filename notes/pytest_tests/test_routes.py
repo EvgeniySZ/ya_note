@@ -1,7 +1,11 @@
 # test_routes.py
+# test_routes.py
 from http import HTTPStatus
 
 from django.urls import reverse
+import pytest
+
+from pytest_django.asserts import assertRedirects
 import pytest
 
 from pytest_django.asserts import assertRedirects
@@ -88,3 +92,4 @@ def test_redirects(client, name, args):
     expected_url = f'{login_url}?next={url}'
     response = client.get(url)
     assertRedirects(response, expected_url)
+    
