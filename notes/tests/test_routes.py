@@ -8,67 +8,70 @@ from notes.models import Note
 
 User = get_user_model()
 
-
 class TestRoutes(TestCase):
-
+    
     @classmethod
     def setUpTestData(cls):
-        # Создаём пользователей
         cls.author = User.objects.create_user(username='Лев Толстой')
         cls.reader = User.objects.create_user(username='Читатель простой')
-        # Создаём заметку, привязанную к автору
         cls.note = Note.objects.create(
             title='Заголовок',
             text='Текст',
             slug='zagolovok',
             author=cls.author
         )
+        
+        # URL constants for cleaner access
+        cls.urls = {
+            'edit': reverse('notes:edit', args=(cls.note.slug,)),
+            'delete': reverse('notes:delete', args=(cls.note.slug,)),
+            'detail': reverse('notes:detail', args=(cls.note.slug,)),
+            'notes_home': reverse('notes:home'),
+            'users_login': reverse('users:login'),
+            'users_logout': reverse('users:logout'),
+            'users_signup': reverse('users:signup'),
+            'notes_add': reverse('notes:add'),
+            'notes_list': reverse('notes:list'),
+        }
 
     def test_availability_for_note_edit_and_delete(self):
         users_statuses = (
-            (self.author, HTTPStatus.OK),       # Автор должен иметь доступ
-            # Другие пользователи не должны иметь доступ
+            (self.author, HTTPStatus.OK),
             (self.reader, HTTPStatus.NOT_FOUND),
         )
         for user, status in users_statuses:
             self.client.force_login(user)
-            # Для каждой пары "пользователь - ожидаемый ответ" проверяем доступ к страницам
-            for name in ('notes:edit', 'notes:delete'):
+            for name in ('edit', 'delete'):
                 with self.subTest(user=user, name=name):
-                    url = reverse(name, args=(self.note.slug,))
-                    response = self.client.get(url)
+                    response = self.client.get(self.urls[name])
                     self.assertEqual(response.status_code, status)
 
     def test_pages_availability(self):
-        # Логиним пользователя для тестирования страниц, которые должны быть доступны только авторизованным пользователям
         self.client.force_login(self.author)
 
         urls = (
-            ('notes:home', None),  # Главная страница доступна для всех
-            ('notes:detail', (self.note.slug,)),  # Страница заметки
-            ('users:login', None),  # Страница логина
-            ('users:logout', None),  # Страница выхода
-            ('users:signup', None),  # Страница регистрации
+            ('notes_home', None),
+            ('detail', None),
+            ('users_login', None),
+            ('users_logout', None),
+            ('users_signup', None),
         )
-        for name, args in urls:
+        for name, _ in urls:
             with self.subTest(name=name):
-                url = reverse(name, args=args)
-                response = self.client.get(url)
+                response = self.client.get(self.urls[name])
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_redirect_for_anonymous_client(self):
-        login_url = reverse('users:login')
-        # Проверяем редирект для анонимного пользователя
+        login_url = self.urls['users_login']
         urls = (
-            ('notes:add', None),  # Добавление заметки
-            ('notes:list', None),  # Список заметок
-            ('notes:edit', (self.note.slug,)),  # Редактирование
-            ('notes:delete', (self.note.slug,)),  # Удаление
-            ('notes:detail', (self.note.slug,)),  # Просмотр заметки
+            ('notes_add', None),
+            ('notes_list', None),
+            ('edit', None),
+            ('delete', None),
+            ('detail', None),
         )
-        for name, args in urls:
+        for name, _ in urls:
             with self.subTest(name=name):
-                url = reverse(name, args=args)
-                redirect_url = f'{login_url}?next={url}'
-                response = self.client.get(url)
+                redirect_url = f'{login_url}?next={self.urls[name]}'
+                response = self.client.get(self.urls[name])
                 self.assertRedirects(response, redirect_url)
