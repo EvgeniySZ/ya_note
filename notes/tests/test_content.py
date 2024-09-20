@@ -7,7 +7,6 @@ from notes.models import Note
 
 User = get_user_model()
 
-# Константы для магических чисел
 NOTE_COUNT_USER_FIRST = 10
 NOTE_COUNT_USER_SECOND = 5
 
@@ -39,7 +38,7 @@ class TestNoteListPage(TestCase):
         Note.objects.bulk_create(cls.notes_user_first)
         Note.objects.bulk_create(cls.notes_user_second)
 
-        cls.url = reverse('notes:list')  # Вынесение URL в setUpTestData
+        cls.url = reverse('notes:list')
 
         cls.user = User.objects.create(username='Пользователь')
         cls.note = Note.objects.create(
@@ -61,11 +60,10 @@ class TestNoteListPage(TestCase):
         response = self.client.get(self.url)
         object_list = response.context['object_list']
 
-        for note in object_list:
-            self.assertFalse(Note.objects.filter(
-                author=self.second_user,
-                slug=note.slug).exists()
-            )
+        self.assertFalse(
+            Note.objects.filter(author=self.second_user, slug__in=[
+                                note.slug for note in object_list]).exists()
+        )
 
     def test_create_form(self):
         self.client.force_login(self.user)
@@ -75,8 +73,7 @@ class TestNoteListPage(TestCase):
 
     def test_update_form(self):
         self.client.force_login(self.user)
-        response = self.client.get(reverse('notes:edit',
-                                           args=(self.note.slug,))
-                                   )
+        response = self.client.get(
+            reverse('notes:edit', args=(self.note.slug,)))
         self.assertIn('form', response.context)
         self.assertIsInstance(response.context['form'], NoteForm)
