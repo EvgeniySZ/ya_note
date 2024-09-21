@@ -1,9 +1,7 @@
 from http import HTTPStatus
-
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
-
 from notes.forms import WARNING
 from notes.models import Note
 
@@ -121,10 +119,11 @@ class TestNoteEditDelete(TestCase):
         self.assertEqual(self.note.text, self.NOTE_TEXT)
 
     def test_user_can_delete_note(self):
+        initial_count = Note.objects.count()
         response = self.auth_client.post(
             reverse('notes:delete', args=(self.note.slug,)))
         self.assertRedirects(response, reverse('notes:success'))
-        self.assertEqual(Note.objects.count(), 0)
+        self.assertEqual(Note.objects.count(), initial_count - 1)
 
     def test_user_cant_delete_note_of_another_user(self):
         initial_count = Note.objects.count()
